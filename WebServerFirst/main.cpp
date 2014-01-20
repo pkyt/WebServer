@@ -30,7 +30,18 @@ using namespace std;
 
 #define BACKLOG 10
 
-struct Queue taskList; // Queue that keeps all tasks
+struct Task {
+    int sock; // socket where to send
+    std::vector<char> recvMsg; // received message
+    Task(int s, std::vector<char> msg);
+};
+
+Task::Task(int s, std::vector<char> msg){
+    sock = s;
+    recvMsg = msg;
+}
+
+struct Queue<Task> taskList; // Queue that keeps all tasks
 
 void* doTask(void* q){
     char beginMessage[] = "HTTP/1.1 200 Okay\r\nContent-Type: text/html; charset=ISO-8859-4 \r\n\r\n<h1>";
@@ -38,15 +49,12 @@ void* doTask(void* q){
     while(true){
         Task t = taskList.pop();
         if(t.recvMsg.size() != 0){
-            unsigned long size = strlen(beginMessage)+strlen(endMessage)+t.recvMsg.size()+1;
-            char msg[size]; // message that we will pass
-            // merging the msg
-            strcpy(msg, beginMessage);
-            string recv (t.recvMsg.begin(),t.recvMsg.end());
-            strcpy(msg+strlen(beginMessage), recv.c_str());
-            strcpy(msg+strlen(beginMessage)+t.recvMsg.size(), endMessage);
-            msg[size] = '\0';
-            if (send(t.sock, msg, size, 0) == -1)
+            if (send(t.sock, beginMessage, strlen(beginMessage), 0) == -1){
+                perror("send");
+            }
+            if (send(t.sock, &t.recvMsg[0], t.recvMsg.size(), 0) == -1)
+                perror("send");
+            if (send(t.sock, endMessage, strlen(endMessage), 0) == -1)
                 perror("send");
             close(t.sock);
             cout << "message sent" << endl;
@@ -63,13 +71,6 @@ void* doTask(void* q){
     return NULL;
 }
 
-void* produceTask(void* q){
-    Task t = *((Task *)q);
-    free(q);
-    taskList.push(t);
-    return NULL;
-}
-
 int main(int argc, const char * argv[])
 {
     std::cout << "Web Server Started.\n";
@@ -78,7 +79,6 @@ int main(int argc, const char * argv[])
     socklen_t addr_size;
     struct addrinfo hints;
     struct addrinfo *res;
-    struct sigaction sa;
     int status, sockfd;
     
     
@@ -110,14 +110,7 @@ int main(int argc, const char * argv[])
         perror("listen");
         exit(1);
     }
-    
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
-    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    }
-    
+
     int numConsumers = 20;
     pthread_t consumers[numConsumers];
     
@@ -145,6 +138,7 @@ int main(int argc, const char * argv[])
         Task tsk (new_fd, recvMsg);
         taskList.push(tsk);
     }
+    
     return 0;
 }
 
