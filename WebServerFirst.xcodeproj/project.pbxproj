@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A7B2C08C188D658900CCF168 /* Queue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A7B2C08B188D658900CCF168 /* Queue.cpp */; };
 		A7C24ECA1889343A004241F2 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A7C24EC91889343A004241F2 /* main.cpp */; };
 		A7C24ECC1889343A004241F2 /* WebServerFirst.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = A7C24ECB1889343A004241F2 /* WebServerFirst.1 */; };
 /* End PBXBuildFile section */
@@ -27,7 +26,6 @@
 
 /* Begin PBXFileReference section */
 		A7B2C08A188D654A00CCF168 /* Queue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Queue.h; sourceTree = "<group>"; };
-		A7B2C08B188D658900CCF168 /* Queue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Queue.cpp; sourceTree = "<group>"; };
 		A7C24EC61889343A004241F2 /* WebServerFirst */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = WebServerFirst; sourceTree = BUILT_PRODUCTS_DIR; };
 		A7C24EC91889343A004241F2 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		A7C24ECB1889343A004241F2 /* WebServerFirst.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = WebServerFirst.1; sourceTree = "<group>"; };
@@ -66,7 +64,6 @@
 				A7C24EC91889343A004241F2 /* main.cpp */,
 				A7C24ECB1889343A004241F2 /* WebServerFirst.1 */,
 				A7B2C08A188D654A00CCF168 /* Queue.h */,
-				A7B2C08B188D658900CCF168 /* Queue.cpp */,
 			);
 			path = WebServerFirst;
 			sourceTree = "<group>";
@@ -123,7 +120,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A7C24ECA1889343A004241F2 /* main.cpp in Sources */,
-				A7B2C08C188D658900CCF168 /* Queue.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
