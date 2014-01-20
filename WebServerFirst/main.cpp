@@ -41,30 +41,38 @@ Task::Task(int s, std::vector<char> msg){
     recvMsg = msg;
 }
 
-struct Queue<Task> taskList; // Queue that keeps all tasks
+struct Queue<int> taskList; // Queue that keeps all tasks
 
 void* doTask(void* q){
     char beginMessage[] = "HTTP/1.1 200 Okay\r\nContent-Type: text/html; charset=ISO-8859-4 \r\n\r\n<h1>";
     char endMessage[] = "</h1>";
     while(true){
-        Task t = taskList.pop();
-        if(t.recvMsg.size() != 0){
-            if (send(t.sock, beginMessage, strlen(beginMessage), 0) == -1){
+        int sock = taskList.pop();
+        int sizeRecvMessage = 1024;
+        char recvMessage[sizeRecvMessage];
+        long len = recv(sock, recvMessage, sizeRecvMessage, 0);
+        if(len == -1){
+            free(recvMessage);
+            cerr << "ERROR: failed on receiving" << endl;
+            exit(1);
+        }
+        if(len != 0){
+            if (send(sock, beginMessage, strlen(beginMessage), 0) == -1){
                 perror("send");
             }
-            if (send(t.sock, &t.recvMsg[0], t.recvMsg.size(), 0) == -1)
+            if (send(sock, recvMessage, len, 0) == -1)
                 perror("send");
-            if (send(t.sock, endMessage, strlen(endMessage), 0) == -1)
+            if (send(sock, endMessage, strlen(endMessage), 0) == -1)
                 perror("send");
-            close(t.sock);
+            close(sock);
             cout << "message sent" << endl;
         }else{
             char msg[] = "HTTP/1.1 200 Okay\r\nContent-Type: text/html; charset=ISO-8859-4 \r\n\r\n<h1>WebServer responded!!!</h1>";
             // since no message exists we send the standard one
-            unsigned long size = strlen(msg);
-            if (send(t.sock, msg, size, 0) == -1)
+            unsigned long sizeMsg = strlen(msg);
+            if (send(sock, msg, sizeMsg, 0) == -1)
                 perror("send");
-            close(t.sock);
+            close(sock);
             cout << "message sent" << endl;
         }
     }
@@ -126,17 +134,7 @@ int main(int argc, const char * argv[])
             cerr << "ERROR: by accept()\n";
             exit(1);
         }
-        int sizeRecvMessage = 1024;
-        char recvMessage[sizeRecvMessage];
-        long len = recv(new_fd, recvMessage, sizeRecvMessage, 0);
-        if(len == -1){
-            free(recvMessage);
-            cerr << "ERROR: failed on receiving" << endl;
-            exit(1);
-        }
-        vector<char> recvMsg (recvMessage, recvMessage+len*sizeof(char));
-        Task tsk (new_fd, recvMsg);
-        taskList.push(tsk);
+        taskList.push(new_fd);
     }
     
     return 0;
