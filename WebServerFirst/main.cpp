@@ -23,6 +23,11 @@
 #include <pthread.h>
 #include <list>
 #include <vector>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fstream>
 
 #include "Queue.h"
 
@@ -52,18 +57,32 @@ void* doTask(void* q){
         char recvMessage[sizeRecvMessage];
         long len = recv(sock, recvMessage, sizeRecvMessage, 0);
         if(len == -1){
-            free(recvMessage);
             cerr << "ERROR: failed on receiving" << endl;
             exit(1);
         }
         if(len != 0){
-            if (send(sock, beginMessage, strlen(beginMessage), 0) == -1){
-                perror("send");
+            
+            
+            std::string fileName("/Users/pkyt/Desktop/github/WebServer/WebServerFirst/send_file.txt");
+            string headerMsg = "HTTP/1.1 200 Okay\r\nContent-Type: text/txt;\r\nContent-disposition: attachment; filename=send_file.txt\r\n\r\n";
+            send(sock, &(headerMsg[0]), headerMsg.length(), 0);
+            FILE * fp = fopen(&(fileName[0]), "r");
+            struct stat fileStatus;
+            stat(&(fileName[0]), &fileStatus);
+            long fileSize = fileStatus.st_size;
+            long sizeCheck = 0;
+            char mfcc[1025];
+            while (sizeCheck + 1024 <= fileSize){
+                size_t read = ::fread(mfcc, sizeof(char), 1024, fp);
+                long sent = send(sock, mfcc, read, 0);
+                sizeCheck += sent;
             }
-            if (send(sock, recvMessage, len, 0) == -1)
-                perror("send");
-            if (send(sock, endMessage, strlen(endMessage), 0) == -1)
-                perror("send");
+            if(sizeCheck > 0){
+                char mfccPart [fileSize - sizeCheck + 1];
+                ::fread(mfccPart, sizeof(char), fileSize - sizeCheck, fp);
+                send(sock, mfcc, fileSize, 0);
+            }
+            fclose(fp);
             close(sock);
             cout << "message sent" << endl;
         }else{
