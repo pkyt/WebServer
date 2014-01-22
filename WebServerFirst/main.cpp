@@ -48,9 +48,14 @@ Task::Task(int s, std::vector<char> msg){
 
 struct Queue<int> taskList; // Queue that keeps all tasks
 
+void sendStandardMsg(int sock){
+    char msg[] = "HTTP/1.1 200 Okay\r\nContent-Type: text/html; charset=ISO-8859-4 \r\n\r\n<h1>WebServer responded!!!</h1>";
+    unsigned long sizeMsg = strlen(msg);
+    if (send(sock, msg, sizeMsg, 0) == -1)
+        perror("send");
+}
+
 void* doTask(void* q){
-    //char beginMessage[] = "HTTP/1.1 200 Okay\r\nContent-Type: text/html; charset=ISO-8859-4 \r\n\r\n<h1>";
-    //char endMessage[] = "</h1>";
     while(true){
         
         int sock = taskList.pop();
@@ -67,56 +72,53 @@ void* doTask(void* q){
                 exit(1);
             }
         }
-        //cout << &(recvMsg[0]) << endl;
-        //char recvMessage[sizeRecvMessage];
-        //len = recv(sock, recvMessage, sizeRecvMessage, 0);
-        //cout << recvMessage << endl;
-        
-        
         if(len != 0){
             
             char * pch;
             pch = strtok(&(recvMsg[0]), "/");
-            pch = strtok(NULL, " \n");
-            if (pch == NULL){
-                char msg[] = "HTTP/1.1 200 Okay\r\nContent-Type: text/html; charset=ISO-8859-4 \r\n\r\n<h1>WebServer responded!!!</h1>";
-                // since no message exists we send the standard one
-                unsigned long sizeMsg = strlen(msg);
-                if (send(sock, msg, sizeMsg, 0) == -1)
-                    perror("send");
+            pch = strtok(NULL, " \n"); // Now pch correspond to the specidic data (path to data) a client needs
+            if (pch == NULL){ // if no data needed send standard message
+                sendStandardMsg(sock);
             }else{
-                cout << "pch: "<< pch << endl;
-                
                 if (strcmp(pch, "HTTP/1.1") == 0){ // no file requested
-                    cout << "http" << endl;
-                    char msg[] = "HTTP/1.1 200 Okay\r\nContent-Type: text/html; charset=ISO-8859-4 \r\n\r\n<h1>WebServer responded!!!</h1>";
-                    // since no message exists we send the standard one
-                    unsigned long sizeMsg = strlen(msg);
-                    if (send(sock, msg, sizeMsg, 0) == -1)
-                        perror("send");
+                    sendStandardMsg(sock);
                 }else{
                     string beginPath = "/Users/pkyt/Desktop/github/WebServer/WebServerFirst/";
                     string restPath = pch;
+                    string fileName;
+                    pch = strtok(&(restPath[0]), "/");
+                    while (pch != NULL){
+                        fileName = pch;
+                        pch = strtok(NULL, "/");
+                    }
                     string path = beginPath + restPath;
                     struct stat fileStatus;
                     stat(&(path[0]), &fileStatus);
-                    
-                    cout << path << endl;
-                    
-                    if (fileStatus.st_size == 0){ // file doesn't exist, send html
-                        char msg[] = "HTTP/1.1 200 Okay\r\nContent-Type: text/html; charset=ISO-8859-4 \r\n\r\n<h1>WebServer responded!!!</h1>";
-                        // since no message exists we send the standard one
-                        unsigned long sizeMsg = strlen(msg);
-                        if (send(sock, msg, sizeMsg, 0) == -1)
-                            perror("send");
+                    if (fileStatus.st_size == 0){ // file doesn't exist, ssince size o file  == 0
+                        sendStandardMsg(sock);
                     }else{ // file exists
-                        string headerMsg = "HTTP/1.1 200 Okay\r\nContent-Type: text/txt;\r\nContent-disposition: attachment;\r\n\r\n";
+                        string headerMsg = "HTTP/1.1 200 Okay\r\nContent-disposition: attachment; filename=" + fileName + "\r\nContent-type: ";
+                        string type; // type of file
+                        pch = strtok(&(fileName[0]), ".");
+                        pch = strtok(NULL, ".");
+                        if(pch == NULL){ // this case should rarely happen
+                            type = "txt";
+                        }else{
+                            type = pch;
+                        }
+                        string contentType;
+                        if (type == "jpeg"){
+                            contentType = "image/jpeg;";
+                        }else{
+                            contentType = "text/txs;";
+                        }
+                        headerMsg = headerMsg + contentType + "\r\n\r\n";
                         send(sock, &(headerMsg[0]), headerMsg.length(), 0);
                         FILE * fp = fopen(&(path[0]), "r");
                         long fileSize = fileStatus.st_size;
                         long sizeCheck = 0;
                         char mfcc[1025];
-                        while (sizeCheck + 1024 <= fileSize){
+                        while (sizeCheck + 1024 <= fileSize){ // sending data by 1024 bytes
                             size_t read = ::fread(mfcc, sizeof(char), 1024, fp);
                             long sent = send(sock, mfcc, read, 0);
                             if(sent == -1){
@@ -125,7 +127,7 @@ void* doTask(void* q){
                             }
                             sizeCheck += sent;
                         }
-                        if(fileSize - sizeCheck > 0){
+                        if(fileSize - sizeCheck > 0){ // send rest of data
                             char mfccPart [fileSize - sizeCheck + 1];
                             ::fread(mfccPart, sizeof(char), fileSize - sizeCheck, fp);
                             long sent = send(sock, mfccPart, fileSize - sizeCheck, 0);
@@ -139,11 +141,7 @@ void* doTask(void* q){
                 }
             }
         }else{
-            char msg[] = "HTTP/1.1 200 Okay\r\nContent-Type: text/html; charset=ISO-8859-4 \r\n\r\n<h1>WebServer responded!!!</h1>";
-            // since no message exists we send the standard one
-            unsigned long sizeMsg = strlen(msg);
-            if (send(sock, msg, sizeMsg, 0) == -1)
-                perror("send");
+            sendStandardMsg(sock);
         }
         close(sock);
         cout << "message sent" << endl;
