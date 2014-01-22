@@ -61,16 +61,6 @@ void sendStandardMsg(int sock){
         perror("send");
 }
 
-bool checkEmpty(string s){
-    string hasToBe = "HTTP/1.";
-    for (int i = 0; i < hasToBe.length(); i++){
-        if(hasToBe[i] != s[i]){
-            return false;
-        }
-    }
-    return true;
-}
-
 void* doTask(void* q){
     while(true){
         
@@ -95,8 +85,9 @@ void* doTask(void* q){
             if (pch == NULL){ // if no data needed send standard message
                 sendStandardMsg(sock);
             }else{
-                cout << pch << endl;
-                if (checkEmpty(pch)){ // no file requested
+                std::string testCompWhat (pch, pch+7);
+                std::string testCompTo = "HTTP/1.";
+                if (!strcmp(&(testCompWhat[0]), &(testCompTo[0]))){ // no file requested
                     sendStandardMsg(sock);
                 }else{
                     string beginPath = "/Users/pkyt/Desktop/github/WebServer/WebServerFirst/";
