@@ -48,11 +48,27 @@ Task::Task(int s, std::vector<char> msg){
 
 struct Queue<int> taskList; // Queue that keeps all tasks
 
+void sendError(int sock){
+    string err404 = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\nERROR 404: Not Found";
+    if (send(sock, &(err404[0]), err404.length(), 0) == -1)
+        perror("send");
+}
+
 void sendStandardMsg(int sock){
     char msg[] = "HTTP/1.1 200 Okay\r\nContent-Type: text/html; charset=ISO-8859-4 \r\n\r\n<h1>WebServer responded!!!</h1>";
     unsigned long sizeMsg = strlen(msg);
     if (send(sock, msg, sizeMsg, 0) == -1)
         perror("send");
+}
+
+bool checkEmpty(string s){
+    string hasToBe = "HTTP/1.";
+    for (int i = 0; i < hasToBe.length(); i++){
+        if(hasToBe[i] != s[i]){
+            return false;
+        }
+    }
+    return true;
 }
 
 void* doTask(void* q){
@@ -73,14 +89,14 @@ void* doTask(void* q){
             }
         }
         if(len != 0){
-            
             char * pch;
             pch = strtok(&(recvMsg[0]), "/");
             pch = strtok(NULL, " \n"); // Now pch correspond to the specidic data (path to data) a client needs
             if (pch == NULL){ // if no data needed send standard message
                 sendStandardMsg(sock);
             }else{
-                if (strcmp(pch, "HTTP/1.1") == 0){ // no file requested
+                cout << pch << endl;
+                if (checkEmpty(pch)){ // no file requested
                     sendStandardMsg(sock);
                 }else{
                     string beginPath = "/Users/pkyt/Desktop/github/WebServer/WebServerFirst/";
@@ -95,7 +111,7 @@ void* doTask(void* q){
                     struct stat fileStatus;
                     stat(&(path[0]), &fileStatus);
                     if (fileStatus.st_size == 0){ // file doesn't exist, ssince size o file  == 0
-                        sendStandardMsg(sock);
+                        sendError(sock);
                     }else{ // file exists
                         string headerMsg = "HTTP/1.1 200 Okay\r\nContent-disposition: attachment; filename=" + fileName + "\r\nContent-type: ";
                         string type; // type of file
