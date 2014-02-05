@@ -30,6 +30,8 @@
 #include <fstream>
 
 #include "Queue.h"
+#include "HTTPContentToSend.h"
+#include "HTTPDirector.h"
 
 using namespace std;
 
@@ -48,17 +50,28 @@ Task::Task(int s, std::vector<char> msg){
 
 struct Queue<int> taskList; // Queue that keeps all tasks
 
-void sendError(int sock){
-    string err404 = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\nERROR 404: Not Found";
-    if (send(sock, &(err404[0]), err404.length(), 0) == -1)
-        perror("send");
-}
-
-void sendStandardMsg(int sock){
-    char msg[] = "HTTP/1.1 200 Okay\r\nContent-Type: text/html; charset=ISO-8859-4 \r\n\r\n<h1>WebServer responded!!!</h1>";
-    unsigned long sizeMsg = strlen(msg);
-    if (send(sock, msg, sizeMsg, 0) == -1)
-        perror("send");
+void sendFile(int sock,string fileName,long fileSize){
+    FILE * fp = fopen(&(fileName[0]), "r");
+    long sizeCheck = 0;
+    char mfcc[1025];
+    while (sizeCheck + 1024 <= fileSize){ // sending data by 1024 bytes
+        size_t read = ::fread(mfcc, sizeof(char), 1024, fp);
+        long sent = send(sock, mfcc, read, 0);
+        if(sent == -1){
+            perror("sent");
+            break;
+        }
+        sizeCheck += sent;
+    }
+    if(fileSize - sizeCheck > 0){ // send rest of data
+        char mfccPart [fileSize - sizeCheck + 1];
+        ::fread(mfccPart, sizeof(char), fileSize - sizeCheck, fp);
+        long sent = send(sock, mfccPart, fileSize - sizeCheck, 0);
+        if(sent == -1){
+            perror("sent");
+        }
+    }
+    fclose(fp);
 }
 
 void* doTask(void* q){
@@ -78,18 +91,20 @@ void* doTask(void* q){
                 exit(1);
             }
         }
+        class HTTPContent wts;
+        class HTTPDirector director = HTTPDirector();
+        
+        bool fileExists = false;
+        struct stat fileStatus;
+        string path;
         if(len != 0){
             char * pch;
             pch = strtok(&(recvMsg[0]), "/");
             pch = strtok(NULL, " \n"); // Now pch correspond to the specidic data (path to data) a client needs
-            if (pch == NULL){ // if no data needed send standard message
-                sendStandardMsg(sock);
-            }else{
+            if (pch != NULL){
                 std::string testCompWhat (pch, pch+7);
                 std::string testCompTo = "HTTP/1.";
-                if (!strcmp(&(testCompWhat[0]), &(testCompTo[0]))){ // no file requested
-                    sendStandardMsg(sock);
-                }else{
+                if (strcmp(&(testCompWhat[0]), &(testCompTo[0]))){
                     string beginPath = "/Users/pkyt/Desktop/github/WebServer/WebServerFirst/";
                     string restPath = pch;
                     string fileName;
@@ -98,13 +113,13 @@ void* doTask(void* q){
                         fileName = pch;
                         pch = strtok(NULL, "/");
                     }
-                    string path = beginPath + restPath;
-                    struct stat fileStatus;
+                    path = beginPath + restPath;
                     stat(&(path[0]), &fileStatus);
                     if (fileStatus.st_size == 0){ // file doesn't exist, ssince size o file  == 0
-                        sendError(sock);
+                        director.fileSend = error404;
                     }else{ // file exists
-                        string headerMsg = "HTTP/1.1 200 Okay\r\nContent-disposition: attachment; filename=" + fileName + "\r\nContent-type: ";
+                        director.fileSend = attachment;
+                        director.fileName = fileName;
                         string type; // type of file
                         pch = strtok(&(fileName[0]), ".");
                         pch = strtok(NULL, ".");
@@ -117,38 +132,20 @@ void* doTask(void* q){
                         if (type == "jpeg"){
                             contentType = "image/jpeg;";
                         }else{
-                            contentType = "text/txs;";
+                            contentType = "text/txt;";
                         }
-                        headerMsg = headerMsg + contentType + "\r\n\r\n";
-                        send(sock, &(headerMsg[0]), headerMsg.length(), 0);
-                        FILE * fp = fopen(&(path[0]), "r");
-                        long fileSize = fileStatus.st_size;
-                        long sizeCheck = 0;
-                        char mfcc[1025];
-                        while (sizeCheck + 1024 <= fileSize){ // sending data by 1024 bytes
-                            size_t read = ::fread(mfcc, sizeof(char), 1024, fp);
-                            long sent = send(sock, mfcc, read, 0);
-                            if(sent == -1){
-                                perror("sent");
-                                break;
-                            }
-                            sizeCheck += sent;
-                        }
-                        if(fileSize - sizeCheck > 0){ // send rest of data
-                            char mfccPart [fileSize - sizeCheck + 1];
-                            ::fread(mfccPart, sizeof(char), fileSize - sizeCheck, fp);
-                            long sent = send(sock, mfccPart, fileSize - sizeCheck, 0);
-                            if(sent == -1){
-                                perror("sent");
-                                break;
-                            }
-                        }
-                        fclose(fp);
+                        director.contentType = contentType;
+                        fileExists = true;
                     }
                 }
             }
-        }else{
-            sendStandardMsg(sock);
+        }
+        director.construct(&wts);
+        string whatToSend = wts.getWhatToSend();
+        if (send(sock, &(whatToSend[0]), whatToSend.length(), 0))
+            perror("send");
+        if (fileExists){
+            sendFile(sock, path, fileStatus.st_size);
         }
         close(sock);
         cout << "message sent" << endl;
