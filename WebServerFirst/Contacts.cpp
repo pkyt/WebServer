@@ -61,6 +61,22 @@ std::string Contacts::pushContact(int socketID, std::string nickName){
         pthread_mutex_unlock(&_lock);
         return "success";
     }else{
-        return "nickName already exists";
+        return "iam:failed";
     }
 }
+
+std::string Contacts::change(int socket, std::string nickName){
+    pthread_mutex_lock(&_lock);
+    for (int i = 0; i < _contacts.size(); i++) {
+        Contact curr = _contacts[i];
+        if (!std::strcmp(&(curr.nickName[0]), &(nickName[0]))) {
+            close(curr.socketID);
+            curr.socketID = socket;
+            pthread_mutex_unlock(&_lock);
+            return "success";
+        }
+    }
+    pthread_mutex_unlock(&_lock);
+    return "was:failed";
+}
+

@@ -55,6 +55,7 @@ public:
     std::vector<std::string> getAllUsers();
     int getSocketID(std::string nickName); // -1 if nickname doesn't exist
     std::string pushContact(int socketID, std::string nickName);
+    std::string change(int socket, std::string nickName);
 };
 
 #endif /* defined(__WebServerFirst__Contacts__) */

@@ -79,10 +79,15 @@ Contacts conts;
 
 void registration(int sock, string nickName){
     string response = conts.pushContact(sock, nickName);
-    if (!strcmp(&(response[0]), "nickName already exists")){
         if (send(sock, &(response[0]), response.length(), 0))
             perror("send");
-    }
+    cout << &(response[0]) << endl;
+}
+
+void login(int sock, string nickName){
+    string response = conts.change(sock, nickName);
+        if (send(sock, &(response[0]), response.length(), 0))
+            perror("send");
     cout << &(response[0]) << endl;
 }
 
@@ -101,6 +106,11 @@ void handleMessage(int sock, vector<char> msg){
             string nickName (msg.begin() + 4, msg.end());
             cout << nickName << endl;
             registration(sock, nickName);
+        }else if (!strcmp(&(command[0]), "was:")){
+            string nickName (msg.begin() + 4, msg.end());
+            login(sock, nickName);
+            cout << nickName << endl;
+            
         }else if (!strcmp(&(command[0]), "exs:")){
             string nickName (msg.begin() + 4, msg.end());
             cout << nickName << endl;
@@ -149,41 +159,33 @@ void handleMessage(int sock, vector<char> msg){
         
         
     }
-    
-    /*
-    vector<string> allUsers = conts.getAllUsers();
-    for (int i = 0; i < allUsers.size(); i++) {
-        cout << allUsers[i] << endl;
-    }*/
-    
-    
 }
 
 void* doTask(void* q){
     while (true) {
-    int sock = taskList.pop();
-    while(true){
+        int sock = taskList.pop();
+        while(true){
         
         
-        cout << "message recieved from socket " << sock << endl << endl << endl;
-        vector<char>recvMsg;
-        int sizeRecvMessage = 1024;
-        long len = sizeRecvMessage;
-        while(len == 1024){
-            char recvMessage[sizeRecvMessage];
-            len = recv(sock, recvMessage, sizeRecvMessage, 0);
-            recvMsg.insert(recvMsg.end(), recvMessage, recvMessage+len);
-            if(len == -1){
-                cerr << "ERROR: failed on receiving" << endl;
-                exit(1);
+            cout << "message recieved from socket " << sock << endl << endl << endl;
+            vector<char>recvMsg;
+            int sizeRecvMessage = 1024;
+            long len = sizeRecvMessage;
+            while(len == 1024){
+                char recvMessage[sizeRecvMessage];
+                len = recv(sock, recvMessage, sizeRecvMessage, 0);
+                recvMsg.insert(recvMsg.end(), recvMessage, recvMessage+len);
+                if(len == -1){
+                    cerr << "ERROR: failed on receiving" << endl;
+                    exit(1);
+                }
             }
-        }
         
-        if (recvMsg.empty()) {
-            break;
-        }
-        cout << &(recvMsg[0]) << endl;
-        handleMessage(sock, recvMsg);
+            if (recvMsg.empty()) {
+                break;
+            }
+            cout << &(recvMsg[0]) << endl;
+            handleMessage(sock, recvMsg);
         /*
         class HTTPContent wts;
         class HTTPDirector director = HTTPDirector();
@@ -249,10 +251,30 @@ void* doTask(void* q){
         }
         // close(sock);
         cout << "message sent" << endl; */
-    }
+        }
 
     }
     return NULL;
+}
+
+void* consoleSend(void*q){
+    while (true) {
+        string response;
+        int sock;
+        cout << "\nenter sock #:";
+        cin >> sock;
+        cout << "\nenter who are you:";
+        string Iam;
+        cin >> Iam;
+        cout << "\nenter message:";
+        string msg;
+        cin >> msg;
+        cout << endl;
+        response = "snd:" + Iam + "\n" + msg;
+        if (send(sock, &(response[0]), response.length(), 0))
+            perror("send");
+        
+    }
 }
 
 int main(int argc, const char * argv[])
@@ -302,6 +324,8 @@ int main(int argc, const char * argv[])
         // creating consumer's thread that will respond to requests
         pthread_create(&consumers[i], NULL, &doTask, NULL);
     }
+    pthread_t console;
+    pthread_create(&console, NULL, &consoleSend, NULL);
     
     while (true) {
         addr_size = sizeof their_addr;
