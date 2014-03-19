@@ -7,8 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A722266B18A1578E00150B5E /* HTTPContentToSend.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A722266918A1578E00150B5E /* HTTPContentToSend.cpp */; };
+		A7B8E10418A24E4D001056EC /* HTTPDirector.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A7B8E10218A24E4D001056EC /* HTTPDirector.cpp */; };
 		A7C24ECA1889343A004241F2 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A7C24EC91889343A004241F2 /* main.cpp */; };
 		A7C24ECC1889343A004241F2 /* WebServerFirst.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = A7C24ECB1889343A004241F2 /* WebServerFirst.1 */; };
+		A7C270DF18C9ECDE00C5DBB2 /* Contacts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A7C270DD18C9ECDE00C5DBB2 /* Contacts.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,10 +28,18 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A722266918A1578E00150B5E /* HTTPContentToSend.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HTTPContentToSend.cpp; sourceTree = "<group>"; };
+		A722266A18A1578E00150B5E /* HTTPContentToSend.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HTTPContentToSend.h; sourceTree = "<group>"; };
+		A7277BD4188FF042008EF09F /* send_file.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = send_file.txt; sourceTree = "<group>"; };
+		A7277BD5188FF141008EF09F /* image.jpeg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = image.jpeg; sourceTree = "<group>"; };
 		A7B2C08A188D654A00CCF168 /* Queue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Queue.h; sourceTree = "<group>"; };
+		A7B8E10218A24E4D001056EC /* HTTPDirector.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HTTPDirector.cpp; sourceTree = "<group>"; };
+		A7B8E10318A24E4D001056EC /* HTTPDirector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HTTPDirector.h; sourceTree = "<group>"; };
 		A7C24EC61889343A004241F2 /* WebServerFirst */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = WebServerFirst; sourceTree = BUILT_PRODUCTS_DIR; };
 		A7C24EC91889343A004241F2 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		A7C24ECB1889343A004241F2 /* WebServerFirst.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = WebServerFirst.1; sourceTree = "<group>"; };
+		A7C270DD18C9ECDE00C5DBB2 /* Contacts.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Contacts.cpp; sourceTree = "<group>"; };
+		A7C270DE18C9ECDE00C5DBB2 /* Contacts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Contacts.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,8 +73,16 @@
 			isa = PBXGroup;
 			children = (
 				A7C24EC91889343A004241F2 /* main.cpp */,
+				A7C270DD18C9ECDE00C5DBB2 /* Contacts.cpp */,
+				A7C270DE18C9ECDE00C5DBB2 /* Contacts.h */,
+				A722266918A1578E00150B5E /* HTTPContentToSend.cpp */,
+				A7B8E10218A24E4D001056EC /* HTTPDirector.cpp */,
+				A7B8E10318A24E4D001056EC /* HTTPDirector.h */,
+				A722266A18A1578E00150B5E /* HTTPContentToSend.h */,
 				A7C24ECB1889343A004241F2 /* WebServerFirst.1 */,
 				A7B2C08A188D654A00CCF168 /* Queue.h */,
+				A7277BD4188FF042008EF09F /* send_file.txt */,
+				A7277BD5188FF141008EF09F /* image.jpeg */,
 			);
 			path = WebServerFirst;
 			sourceTree = "<group>";
@@ -119,6 +138,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A7C270DF18C9ECDE00C5DBB2 /* Contacts.cpp in Sources */,
+				A722266B18A1578E00150B5E /* HTTPContentToSend.cpp in Sources */,
+				A7B8E10418A24E4D001056EC /* HTTPDirector.cpp in Sources */,
 				A7C24ECA1889343A004241F2 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

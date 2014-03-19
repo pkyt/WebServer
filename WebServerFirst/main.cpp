@@ -32,6 +32,7 @@
 #include "Queue.h"
 #include "HTTPContentToSend.h"
 #include "HTTPDirector.h"
+#include "Contacts.h"
 
 using namespace std;
 
@@ -74,11 +75,97 @@ void sendFile(int sock,string fileName,long fileSize){
     fclose(fp);
 }
 
+Contacts conts;
+
+void registration(int sock, string nickName){
+    string response = conts.pushContact(sock, nickName);
+    if (!strcmp(&(response[0]), "nickName already exists")){
+        if (send(sock, &(response[0]), response.length(), 0))
+            perror("send");
+    }
+    cout << &(response[0]) << endl;
+}
+
+void sendErrorMessage(int sock, string whatToSend){
+    if (send(sock, &(whatToSend[0]), whatToSend.length(), 0))
+        perror("send");
+}
+
+void handleMessage(int sock, vector<char> msg){
+    if (msg.size() < 4) {
+        sendErrorMessage(sock,"invalid request");
+    }else{
+        string command (msg.begin(), msg.begin()+4);
+        cout << "1 " << command << endl;
+        if (!strcmp(&(command[0]), "Iam:")) {
+            string nickName (msg.begin() + 4, msg.end());
+            cout << nickName << endl;
+            registration(sock, nickName);
+        }else if (!strcmp(&(command[0]), "exs:")){
+            string nickName (msg.begin() + 4, msg.end());
+            cout << nickName << endl;
+            string response;
+            if (conts.getSocketID(nickName) != -1){
+                response = "exs:true";
+            }else{
+                response = "exs:false";
+            }
+            cout << response << endl;
+            long sent = send(sock, &(response[0]), response.length(), 0);
+            
+            if (sent == -1) {
+                perror("send");
+            }
+            cout << "sent = " << sent << endl;
+        }else if (!strcmp(&(command[0]), "snd:")){
+            char* pch = strtok(&(msg[0]), "\n");
+            string first (pch);
+            pch = strtok(NULL, "\n");
+            if (pch == NULL)
+                sendErrorMessage(sock,"snd has to have at least 3 lines");
+            string toWhom (pch);
+            pch = strtok(NULL, "");
+            if (pch == NULL)
+                sendErrorMessage(sock,"snd has to have at least 3 lines");
+            string message (pch);
+            string fromWhom (first.begin()+4, first.end());
+            int socketToWhom = conts.getSocketID(toWhom);
+            
+            cout << toWhom << " " << fromWhom << " " << socketToWhom << " " << sock << endl;
+            
+            
+            string parsedMessage = "snd:" + fromWhom + "\n" + message;
+            if (send(socketToWhom, &(parsedMessage[0]), parsedMessage.length(), 0))
+                perror("send");
+        }else if (!strcmp(&(command[0]), "frd:")){
+            string allusers = "frd:";
+            vector<string> nickNames = conts.getAllUsers();
+            for (int i = 0; i < nickNames.size(); i++){
+                allusers = allusers  + "\n" + nickNames[i];
+            }
+            if (send(sock, &(allusers[0]), allusers.length(), 0))
+                perror("send");
+        }
+        
+        
+    }
+    
+    /*
+    vector<string> allUsers = conts.getAllUsers();
+    for (int i = 0; i < allUsers.size(); i++) {
+        cout << allUsers[i] << endl;
+    }*/
+    
+    
+}
+
 void* doTask(void* q){
+    while (true) {
+    int sock = taskList.pop();
     while(true){
         
-        int sock = taskList.pop();
-        cout << "message recieved from socket " << sock << endl;
+        
+        cout << "message recieved from socket " << sock << endl << endl << endl;
         vector<char>recvMsg;
         int sizeRecvMessage = 1024;
         long len = sizeRecvMessage;
@@ -91,12 +178,22 @@ void* doTask(void* q){
                 exit(1);
             }
         }
+        
+        if (recvMsg.empty()) {
+            break;
+        }
+        cout << &(recvMsg[0]) << endl;
+        handleMessage(sock, recvMsg);
+        /*
         class HTTPContent wts;
         class HTTPDirector director = HTTPDirector();
         
         bool fileExists = false;
         struct stat fileStatus;
         string path;
+        
+        
+        
         if(len != 0){
             char * pch;
             pch = strtok(&(recvMsg[0]), "/");
@@ -138,6 +235,9 @@ void* doTask(void* q){
                         fileExists = true;
                     }
                 }
+            }else{
+                // new code here
+                
             }
         }
         director.construct(&wts);
@@ -147,8 +247,10 @@ void* doTask(void* q){
         if (fileExists){
             sendFile(sock, path, fileStatus.st_size);
         }
-        close(sock);
-        cout << "message sent" << endl;
+        // close(sock);
+        cout << "message sent" << endl; */
+    }
+
     }
     return NULL;
 }
