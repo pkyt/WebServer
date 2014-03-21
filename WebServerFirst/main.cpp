@@ -77,15 +77,16 @@ void sendFile(int sock,string fileName,long fileSize){
 
 Contacts conts;
 
-void registration(int sock, string nickName){
-    string response = conts.pushContact(sock, nickName);
+void registration(int sock, string nickName, string pass){
+    string response = "reg:" + conts.pushContact(sock, nickName, pass);
         if (send(sock, &(response[0]), response.length(), 0))
             perror("send");
     cout << &(response[0]) << endl;
 }
 
-void login(int sock, string nickName){
-    string response = conts.change(sock, nickName);
+void login(int sock, string nickName, string pass){
+    cout << "login with: " << &(nickName[0]) << " password:" << pass << endl;
+    string response = "lin:" + conts.change(sock, nickName, pass);
         if (send(sock, &(response[0]), response.length(), 0))
             perror("send");
     cout << &(response[0]) << endl;
@@ -103,19 +104,41 @@ void handleMessage(int sock, vector<char> msg){
         string command (msg.begin(), msg.begin()+4);
         cout << "1 " << command << endl;
         if (!strcmp(&(command[0]), "Iam:")) {
-            string nickName (msg.begin() + 4, msg.end());
+            string nickNamePass (msg.begin() + 4, msg.end());
+            char* pch = strtok(&(nickNamePass[0]), "\n");
+            string nickName = pch;
+            pch = strtok(NULL, "");
+            if (pch == NULL) {
+                sendErrorMessage(sock,"snd has to have at least 2 lines");
+            }
+            string pass = pch;
             cout << nickName << endl;
-            registration(sock, nickName);
+            registration(sock, nickName, pass);
         }else if (!strcmp(&(command[0]), "was:")){
-            string nickName (msg.begin() + 4, msg.end());
-            login(sock, nickName);
+            string nickNamePass (msg.begin() + 4, msg.end());
+            char* pch = strtok(&(nickNamePass[0]), "\n");
+            string nickName = pch;
+            pch = strtok(NULL, "");
+            if (pch == NULL) {
+                sendErrorMessage(sock,"snd has to have at least 2 lines");
+            }
+            string pass = pch;
             cout << nickName << endl;
+            login(sock, nickName, pass);
             
+        }else if (!strcmp(&(command[0]), "out:")){
+            string nickNamePass (msg.begin() + 4, msg.end());
+            cout << "log out of nickname: " << &(nickNamePass[0]) << endl;
+            conts.logout(nickNamePass);
+            string whatToSend = "done";
+            if (send(sock, &(whatToSend[0]), whatToSend.length(), 0))
+                perror("send");
+            cout << &(whatToSend[0]) << endl;
         }else if (!strcmp(&(command[0]), "exs:")){
             string nickName (msg.begin() + 4, msg.end());
             cout << nickName << endl;
             string response;
-            if (conts.getSocketID(nickName) != -1){
+            if (conts.getSocketID(nickName) != -2){
                 response = "exs:true";
             }else{
                 response = "exs:false";
@@ -140,13 +163,13 @@ void handleMessage(int sock, vector<char> msg){
             string message (pch);
             string fromWhom (first.begin()+4, first.end());
             int socketToWhom = conts.getSocketID(toWhom);
+            if (socketToWhom != -1) {
+                cout << toWhom << " " << fromWhom << " " << socketToWhom << " " << sock << endl;
+                string parsedMessage = "snd:" + fromWhom + "\n" + message;
+                if (send(socketToWhom, &(parsedMessage[0]), parsedMessage.length(), 0))
+                    perror("send");
+            }
             
-            cout << toWhom << " " << fromWhom << " " << socketToWhom << " " << sock << endl;
-            
-            
-            string parsedMessage = "snd:" + fromWhom + "\n" + message;
-            if (send(socketToWhom, &(parsedMessage[0]), parsedMessage.length(), 0))
-                perror("send");
         }else if (!strcmp(&(command[0]), "frd:")){
             string allusers = "frd:";
             vector<string> nickNames = conts.getAllUsers();
@@ -186,73 +209,10 @@ void* doTask(void* q){
             }
             cout << &(recvMsg[0]) << endl;
             handleMessage(sock, recvMsg);
-        /*
-        class HTTPContent wts;
-        class HTTPDirector director = HTTPDirector();
-        
-        bool fileExists = false;
-        struct stat fileStatus;
-        string path;
-        
-        
-        
-        if(len != 0){
-            char * pch;
-            pch = strtok(&(recvMsg[0]), "/");
-            pch = strtok(NULL, " \n"); // Now pch correspond to the specidic data (path to data) a client needs
-            if (pch != NULL){
-                std::string testCompWhat (pch, pch+7);
-                std::string testCompTo = "HTTP/1.";
-                if (strcmp(&(testCompWhat[0]), &(testCompTo[0]))){
-                    string beginPath = "/Users/pkyt/Desktop/github/WebServer/WebServerFirst/";
-                    string restPath = pch;
-                    string fileName;
-                    pch = strtok(&(restPath[0]), "/");
-                    while (pch != NULL){
-                        fileName = pch;
-                        pch = strtok(NULL, "/");
-                    }
-                    path = beginPath + restPath;
-                    stat(&(path[0]), &fileStatus);
-                    if (fileStatus.st_size == 0){ // file doesn't exist, ssince size o file  == 0
-                        director.fileSend = error404;
-                    }else{ // file exists
-                        director.fileSend = attachment;
-                        director.fileName = fileName;
-                        string type; // type of file
-                        pch = strtok(&(fileName[0]), ".");
-                        pch = strtok(NULL, ".");
-                        if(pch == NULL){ // this case should rarely happen
-                            type = "txt";
-                        }else{
-                            type = pch;
-                        }
-                        string contentType;
-                        if (type == "jpeg"){
-                            contentType = "image/jpeg;";
-                        }else{
-                            contentType = "text/txt;";
-                        }
-                        director.contentType = contentType;
-                        fileExists = true;
-                    }
-                }
-            }else{
-                // new code here
-                
-            }
         }
-        director.construct(&wts);
-        string whatToSend = wts.getWhatToSend();
-        if (send(sock, &(whatToSend[0]), whatToSend.length(), 0))
-            perror("send");
-        if (fileExists){
-            sendFile(sock, path, fileStatus.st_size);
-        }
-        // close(sock);
-        cout << "message sent" << endl; */
-        }
-
+        cout << "socket closed: " << sock << endl;
+        conts.logoutOfEveryUserWithSock(sock);
+        close(sock);
     }
     return NULL;
 }

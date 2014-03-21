@@ -40,7 +40,7 @@ int Contacts::getSocketID(std::string nickName){
         }
     }
     pthread_mutex_unlock(&_lock);
-    return -1;
+    return -2;
 }
 
 std::vector<std::string> Contacts::getAllUsers(){
@@ -53,30 +53,60 @@ std::vector<std::string> Contacts::getAllUsers(){
     return result;
 }
 
-std::string Contacts::pushContact(int socketID, std::string nickName){
-    if(getSocketID(nickName) == -1){
+std::string Contacts::pushContact(int socketID, std::string nickName, std::string pass){
+    if(getSocketID(nickName) == -2){
         pthread_mutex_lock(&_lock);
-        Contact newContact (socketID, nickName);
+        Contact newContact (socketID, nickName, pass);
         _contacts.push_back(newContact);
         pthread_mutex_unlock(&_lock);
-        return "success";
+        return "success registation";
     }else{
         return "iam:failed";
     }
 }
 
-std::string Contacts::change(int socket, std::string nickName){
+std::string Contacts::change(int socket, std::string nickName, std::string pass){
     pthread_mutex_lock(&_lock);
     for (int i = 0; i < _contacts.size(); i++) {
         Contact curr = _contacts[i];
         if (!std::strcmp(&(curr.nickName[0]), &(nickName[0]))) {
-            close(curr.socketID);
-            curr.socketID = socket;
+            if (!std::strcmp(&(curr.password[0]), &(pass[0]))) {
+                if (curr.socketID != -1) {
+                    pthread_mutex_unlock(&_lock);
+                    return "user is in use, log out first";
+                }
+                curr.socketID = socket;
+                pthread_mutex_unlock(&_lock);
+                return "success login";
+            }
             pthread_mutex_unlock(&_lock);
-            return "success";
+            return "inccorect password";
         }
     }
     pthread_mutex_unlock(&_lock);
-    return "was:failed";
+    return "user doesn't exist";
+}
+
+void Contacts::logout(std::string nickName){
+    pthread_mutex_lock(&_lock);
+    for (int i = 0; i < _contacts.size(); i++) {
+        Contact curr = _contacts[i];
+        if (!std::strcmp(&(curr.nickName[0]), &(nickName[0]))) {
+            _contacts[i].socketID = -1;
+            break;
+        }
+    }
+    pthread_mutex_unlock(&_lock);
+}
+
+void Contacts::logoutOfEveryUserWithSock(int sock){
+    pthread_mutex_lock(&_lock);
+    for (int i = 0; i < _contacts.size(); i++) {
+        Contact curr = _contacts[i];
+        if (curr.socketID == sock) {
+            _contacts[i].socketID = -1;
+        }
+    }
+    pthread_mutex_unlock(&_lock);
 }
 

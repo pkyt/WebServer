@@ -35,9 +35,11 @@
 struct Contact {
     int socketID;
     std::string nickName;
-    Contact(int sock, std::string nickname){
+    std::string password;
+    Contact(int sock, std::string nickname, std::string pass){
         socketID = sock;
         Contact::nickName = nickname;
+        password = pass;
     }
 };
 
@@ -54,8 +56,10 @@ public:
     }
     std::vector<std::string> getAllUsers();
     int getSocketID(std::string nickName); // -1 if nickname doesn't exist
-    std::string pushContact(int socketID, std::string nickName);
-    std::string change(int socket, std::string nickName);
+    std::string pushContact(int socketID, std::string nickName, std::string pass);
+    std::string change(int socket, std::string nickName, std::string pass);
+    void logout(std::string nickName);
+    void logoutOfEveryUserWithSock(int sock);
 };
 
 #endif /* defined(__WebServerFirst__Contacts__) */
