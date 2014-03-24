@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fstream>
+#include <map>
 
 #include "Queue.h"
 #include "HTTPContentToSend.h"
@@ -76,24 +77,112 @@ void sendFile(int sock,string fileName,long fileSize){
 }
 
 Contacts conts;
-
-void registration(int sock, string nickName, string pass){
-    string response = "reg:" + conts.pushContact(sock, nickName, pass);
-        if (send(sock, &(response[0]), response.length(), 0))
-            perror("send");
-    cout << &(response[0]) << endl;
-}
-
-void login(int sock, string nickName, string pass){
-    cout << "login with: " << &(nickName[0]) << " password:" << pass << endl;
-    string response = "lin:" + conts.change(sock, nickName, pass);
-        if (send(sock, &(response[0]), response.length(), 0))
-            perror("send");
-    cout << &(response[0]) << endl;
-}
+typedef void (*ScriptFunction)(int sock, string msg); // function pointer type
+typedef std::map<std::string, ScriptFunction> script_map;
+script_map commander;
 
 void sendErrorMessage(int sock, string whatToSend){
     if (send(sock, &(whatToSend[0]), whatToSend.length(), 0))
+        perror("send");
+}
+
+void registration1(int sock, string nickName, string pass){
+    string response = "reg:" + conts.pushContact(sock, nickName, pass);
+    if (send(sock, &(response[0]), response.length(), 0))
+        perror("send");
+    cout << &(response[0]) << endl;
+}
+
+void login1(int sock, string nickName, string pass){
+    cout << "login with: " << &(nickName[0]) << " password:" << pass << endl;
+    string response = "lin:" + conts.change(sock, nickName, pass);
+    if (send(sock, &(response[0]), response.length(), 0))
+        perror("send");
+    cout << &(response[0]) << endl;
+}
+
+void registration(int sock, string msg){
+    string nickNamePass (msg.begin() + 4, msg.end());
+    char* pch = strtok(&(nickNamePass[0]), "\n");
+    string nickName = pch;
+    pch = strtok(NULL, "");
+    if (pch == NULL) {
+        sendErrorMessage(sock,"snd has to have at least 2 lines");
+    }
+    string pass = pch;
+    cout << nickName << endl;
+    registration1(sock, nickName, pass);
+}
+
+void login(int sock, string msg){
+    string nickNamePass (msg.begin() + 4, msg.end());
+    char* pch = strtok(&(nickNamePass[0]), "\n");
+    string nickName = pch;
+    pch = strtok(NULL, "");
+    if (pch == NULL) {
+        sendErrorMessage(sock,"snd has to have at least 2 lines");
+    }
+    string pass = pch;
+    cout << nickName << endl;
+    login1(sock, nickName, pass);
+}
+
+void logout(int sock, string msg){
+    string nickNamePass (msg.begin() + 4, msg.end());
+    cout << "log out of nickname: " << &(nickNamePass[0]) << endl;
+    conts.logout(nickNamePass);
+    string whatToSend = "done";
+    if (send(sock, &(whatToSend[0]), whatToSend.length(), 0))
+        perror("send");
+    cout << &(whatToSend[0]) << endl;
+}
+
+void exist(int sock, string msg){
+    string nickName (msg.begin() + 4, msg.end());
+    cout << nickName << endl;
+    string response;
+    if (conts.getSocketID(nickName) != -2){
+        response = "exs:true";
+    }else{
+        response = "exs:false";
+    }
+    cout << response << endl;
+    long sent = send(sock, &(response[0]), response.length(), 0);
+    
+    if (sent == -1) {
+        perror("send");
+    }
+    cout << "sent = " << sent << endl;
+}
+
+void sendMessage(int sock, string msg){
+    char* pch = strtok(&(msg[0]), "\n");
+    string first (pch);
+    pch = strtok(NULL, "\n");
+    if (pch == NULL)
+        sendErrorMessage(sock,"snd has to have at least 3 lines");
+    string toWhom (pch);
+    pch = strtok(NULL, "");
+    if (pch == NULL)
+        sendErrorMessage(sock,"snd has to have at least 3 lines");
+    string message (pch);
+    string fromWhom (first.begin()+4, first.end());
+    int socketToWhom = conts.getSocketID(toWhom);
+    if (socketToWhom != -1) {
+        cout << "sending message: " << toWhom << " " << fromWhom << " " << socketToWhom << " " << sock << endl;
+        string parsedMessage = "snd:" + fromWhom + "\n" + message;
+        if (send(socketToWhom, &(parsedMessage[0]), parsedMessage.length(), 0))
+            perror("send");
+    }
+}
+
+void friends(int sock, string msg){
+    string allusers = "frd:";
+    vector<string> nickNames = conts.getAllUsers();
+    for (int i = 0; i < nickNames.size(); i++){
+        allusers = allusers  + "\n" + nickNames[i];
+    }
+    if (send(sock, &(allusers[0]), allusers.length(), 0))
         perror("send");
 }
 
@@ -103,84 +192,15 @@ void handleMessage(int sock, vector<char> msg){
     }else{
         string command (msg.begin(), msg.begin()+4);
         cout << "1 " << command << endl;
-        if (!strcmp(&(command[0]), "Iam:")) {
-            string nickNamePass (msg.begin() + 4, msg.end());
-            char* pch = strtok(&(nickNamePass[0]), "\n");
-            string nickName = pch;
-            pch = strtok(NULL, "");
-            if (pch == NULL) {
-                sendErrorMessage(sock,"snd has to have at least 2 lines");
-            }
-            string pass = pch;
-            cout << nickName << endl;
-            registration(sock, nickName, pass);
-        }else if (!strcmp(&(command[0]), "was:")){
-            string nickNamePass (msg.begin() + 4, msg.end());
-            char* pch = strtok(&(nickNamePass[0]), "\n");
-            string nickName = pch;
-            pch = strtok(NULL, "");
-            if (pch == NULL) {
-                sendErrorMessage(sock,"snd has to have at least 2 lines");
-            }
-            string pass = pch;
-            cout << nickName << endl;
-            login(sock, nickName, pass);
-            
-        }else if (!strcmp(&(command[0]), "out:")){
-            string nickNamePass (msg.begin() + 4, msg.end());
-            cout << "log out of nickname: " << &(nickNamePass[0]) << endl;
-            conts.logout(nickNamePass);
-            string whatToSend = "done";
-            if (send(sock, &(whatToSend[0]), whatToSend.length(), 0))
-                perror("send");
-            cout << &(whatToSend[0]) << endl;
-        }else if (!strcmp(&(command[0]), "exs:")){
-            string nickName (msg.begin() + 4, msg.end());
-            cout << nickName << endl;
-            string response;
-            if (conts.getSocketID(nickName) != -2){
-                response = "exs:true";
-            }else{
-                response = "exs:false";
-            }
-            cout << response << endl;
-            long sent = send(sock, &(response[0]), response.length(), 0);
-            
-            if (sent == -1) {
-                perror("send");
-            }
-            cout << "sent = " << sent << endl;
-        }else if (!strcmp(&(command[0]), "snd:")){
-            char* pch = strtok(&(msg[0]), "\n");
-            string first (pch);
-            pch = strtok(NULL, "\n");
-            if (pch == NULL)
-                sendErrorMessage(sock,"snd has to have at least 3 lines");
-            string toWhom (pch);
-            pch = strtok(NULL, "");
-            if (pch == NULL)
-                sendErrorMessage(sock,"snd has to have at least 3 lines");
-            string message (pch);
-            string fromWhom (first.begin()+4, first.end());
-            int socketToWhom = conts.getSocketID(toWhom);
-            if (socketToWhom != -1) {
-                cout << toWhom << " " << fromWhom << " " << socketToWhom << " " << sock << endl;
-                string parsedMessage = "snd:" + fromWhom + "\n" + message;
-                if (send(socketToWhom, &(parsedMessage[0]), parsedMessage.length(), 0))
-                    perror("send");
-            }
-            
-        }else if (!strcmp(&(command[0]), "frd:")){
-            string allusers = "frd:";
-            vector<string> nickNames = conts.getAllUsers();
-            for (int i = 0; i < nickNames.size(); i++){
-                allusers = allusers  + "\n" + nickNames[i];
-            }
-            if (send(sock, &(allusers[0]), allusers.length(), 0))
-                perror("send");
+        
+        script_map::const_iterator iter = commander.find(command);
+        if (iter == commander.end())
+        {
+            sendErrorMessage(sock, "command doesn't exist");
+        }else{
+            string message (msg.begin(), msg.end());
+            (*(iter->second))(sock, message);
         }
-        
-        
     }
 }
 
@@ -240,6 +260,15 @@ void* consoleSend(void*q){
 int main(int argc, const char * argv[])
 {
     std::cout << "Web Server Started.\n";
+    
+    commander.insert(std::make_pair("Iam:", &registration));
+    commander.insert(std::make_pair("was:", &login));
+    commander.insert(std::make_pair("out:", &logout));
+    commander.insert(std::make_pair("exs:", &exist));
+    commander.insert(std::make_pair("snd:", &sendMessage));
+    commander.insert(std::make_pair("frd:", &friends));
+    
+    
     
     struct sockaddr_storage their_addr;
     socklen_t addr_size;
